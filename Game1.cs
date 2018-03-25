@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using Roleplay;
 
 namespace Game1
 {
@@ -9,9 +10,18 @@ namespace Game1
     /// </summary>
     public class Game1 : Game
     {
+        Vector2 translation;
         GraphicsDeviceManager graphics;
         SpriteBatch spriteBatch;
-        
+        Texture2D tex;
+        RenderTarget2D rt;
+        Point virtDim;
+        Point winDim;
+        Vector2 scale;
+        Vector2 rtPos;
+        bool IsReleased;
+        MagicTexture test;
+
         public Game1()
         {
             graphics = new GraphicsDeviceManager(this);
@@ -26,9 +36,36 @@ namespace Game1
         /// </summary>
         protected override void Initialize()
         {
-            // TODO: Add your initialization logic here
-
             base.Initialize();
+            translation = new Vector2(-400, -400);
+            virtDim = new Point(1920, 1080);
+            winDim = new Point(960, 540);
+            rt = new RenderTarget2D(GraphicsDevice, virtDim.X, virtDim.Y);
+            ResizeWindow();
+        }
+
+        public void CalcScale()
+        {
+            float scaleX = (float)winDim.X / virtDim.X;
+            float scaleY = (float)winDim.Y / virtDim.Y;
+            if (scaleX > scaleY)
+            {
+                scale = new Vector2(scaleY);
+                rtPos = new Vector2((winDim.X - virtDim.X * scaleY), 0);
+            }
+            else
+            {
+                scale = new Vector2(scaleX);
+                rtPos = new Vector2(0, (winDim.Y - virtDim.Y * scaleX));
+            }
+        }
+
+        public void ResizeWindow()
+        {
+            graphics.PreferredBackBufferHeight = winDim.Y;
+            graphics.PreferredBackBufferWidth = winDim.X;
+            graphics.ApplyChanges();
+            CalcScale();
         }
 
         /// <summary>
@@ -37,10 +74,9 @@ namespace Game1
         /// </summary>
         protected override void LoadContent()
         {
-            // Create a new SpriteBatch, which can be used to draw textures.
             spriteBatch = new SpriteBatch(GraphicsDevice);
-
-            // TODO: use this.Content to load your game content here
+            tex = Content.Load<Texture2D>("862675");
+            test = new MagicTexture(tex, new Rectangle(0, 0, tex.Width, tex.Height), Facing.N);
         }
 
         /// <summary>
@@ -49,7 +85,7 @@ namespace Game1
         /// </summary>
         protected override void UnloadContent()
         {
-            // TODO: Unload any non ContentManager content here
+
         }
 
         /// <summary>
@@ -59,6 +95,16 @@ namespace Game1
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
         {
+            if (Keyboard.GetState().IsKeyDown(Keys.U) && IsReleased)
+            {
+                winDim.Y = (int)(winDim.Y * 1.2f);
+                winDim.X = (int)(winDim.X * 1.2f);
+                ResizeWindow();
+                IsReleased = false;
+            }
+            if (Keyboard.GetState().IsKeyUp(Keys.U))
+                IsReleased = true;
+
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
@@ -75,8 +121,16 @@ namespace Game1
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
 
-            // TODO: Add your drawing code here
+            GraphicsDevice.SetRenderTarget(rt);
+            spriteBatch.Begin();
+            test.Draw(spriteBatch, new Vector2(0, 0));
+            spriteBatch.End();
 
+            GraphicsDevice.SetRenderTarget(null);
+            var scaler = Matrix.CreateScale(scale.X, scale.Y, 0);
+            spriteBatch.Begin(transformMatrix: scaler);
+            spriteBatch.Draw(rt, Vector2.Zero, null);
+            spriteBatch.End();
             base.Draw(gameTime);
         }
     }
